@@ -190,3 +190,121 @@ var I18N_EN = {"nav.video": "Video", "nav.design": "Design", "nav.games": "Video
   document.querySelectorAll('.video-tile video').forEach(function(el){
     el.addEventListener('click', function(){ openVideo(el.currentSrc || el.src); });
   });
+
+  // ---------- interactive scanner background: dot grid + trailing glow ----------
+  (function(){
+    var canvas = document.getElementById('bgcanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var ambientSvg = document.querySelector('.ambient svg');
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+    var GAP = 42;
+    var dots = [];
+
+    function layout(){
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W * DPR;
+      canvas.height = H * DPR;
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+      dots = [];
+      var cols = Math.ceil(W / GAP) + 1;
+      var rows = Math.ceil(H / GAP) + 1;
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          dots.push({ x: c * GAP, y: r * GAP, phase: Math.random() * Math.PI * 2 });
+        }
+      }
+    }
+
+    var pointer = { x: -9999, y: -9999, active: false };
+    var glow = { x: W / 2, y: H / 2 };
+    var t = 0;
+    var RADIUS = 75;
+
+    window.addEventListener('pointermove', function(e){
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.active = true;
+    });
+    window.addEventListener('pointerleave', function(){ pointer.active = false; });
+    window.addEventListener('resize', layout);
+
+    function frame(){
+      t += 0.016;
+
+      var targetX, targetY;
+      if (pointer.active) {
+        targetX = pointer.x;
+        targetY = pointer.y;
+      } else {
+        targetX = W / 2 + Math.cos(t * 0.35) * (W * 0.28);
+        targetY = H / 2 + Math.sin(t * 0.5) * (H * 0.22);
+      }
+
+      if (reduceMotion) {
+        glow.x = W / 2;
+        glow.y = H / 2;
+      } else {
+        glow.x += (targetX - glow.x) * 0.16;
+        glow.y += (targetY - glow.y) * 0.16;
+      }
+
+      // dots react to the real cursor instantly; only the halo trails behind
+      var reactX = pointer.active ? pointer.x : glow.x;
+      var reactY = pointer.active ? pointer.y : glow.y;
+
+      ctx.clearRect(0, 0, W, H);
+
+      var grad = ctx.createRadialGradient(glow.x, glow.y, 0, glow.x, glow.y, 130);
+      grad.addColorStop(0, 'rgba(200,255,61,0.10)');
+      grad.addColorStop(0.5, 'rgba(200,255,61,0.035)');
+      grad.addColorStop(1, 'rgba(200,255,61,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      for (var i = 0; i < dots.length; i++) {
+        var d = dots[i];
+        var dx = d.x - reactX;
+        var dy = d.y - reactY;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var proximity = Math.max(0, 1 - dist / RADIUS);
+
+        var idle = reduceMotion ? 0.5 : 0.5 + Math.sin(t * 0.8 + d.phase) * 0.5;
+        var baseAlpha = 0.10 + idle * 0.10;
+        var alpha = baseAlpha + proximity * 0.85;
+        var size = 1.1 + proximity * 1.6;
+
+        if (proximity > 0.02) {
+          var mix = proximity;
+          var cr = Math.round(46 + (200 - 46) * mix);
+          var cg = Math.round(49 + (255 - 49) * mix);
+          var cb = Math.round(54 + (61 - 54) * mix);
+          ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + Math.min(alpha, 1) + ')';
+        } else {
+          ctx.fillStyle = 'rgba(46,49,54,' + Math.min(alpha, 1) + ')';
+        }
+
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (ambientSvg && !reduceMotion) {
+        var cx = W / 2, cy = H / 2;
+        var px = (glow.x - cx) / cx;
+        var py = (glow.y - cy) / cy;
+        ambientSvg.style.transform = 'translate(' + (px * 14) + 'px,' + (py * 10) + 'px)';
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    layout();
+    frame();
+  })();

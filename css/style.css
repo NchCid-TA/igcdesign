@@ -31,9 +31,12 @@
   ul{margin:0;padding:0;list-style:none;}
   img{max-width:100%;}
 
+  /* interactive scanner background — dot grid + trailing glow */
+  #bgcanvas{position:fixed;inset:0;z-index:0;display:block;pointer-events:none;}
+
   /* ambient background — dark green vector motif */
   .ambient{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
-  .ambient svg{position:absolute;top:-10%;right:-6%;width:min(64vw,760px);height:auto;opacity:0.55;}
+  .ambient svg{position:absolute;top:-10%;right:-6%;width:min(64vw,760px);height:auto;opacity:0.55;transition:transform 0.25s ease-out;}
   .ambient .ring{fill:none;stroke:var(--green);stroke-width:1;}
   .ambient .sweep{fill:none;stroke:var(--lime-dim);stroke-width:1.4;stroke-dasharray:2 14;opacity:0.55;transform-origin:560px 180px;}
   .ambient .cross line{stroke:var(--green);stroke-width:1;}
