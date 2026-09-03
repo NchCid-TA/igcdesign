@@ -246,6 +246,10 @@
   }
 
   :focus-visible{outline:2px solid var(--lime);outline-offset:2px;}
+  /* headings get tabindex="-1" only for the route-change focus-management
+     trick (screen reader announcements) — suppress the visual ring there,
+     it isn't real keyboard focus */
+  h1[tabindex="-1"]:focus,h2[tabindex="-1"]:focus{outline:none;}
 
   /* ---------- page transition — IGC monogram spin-in ---------- */
   .page-transition{
